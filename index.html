@@ -1134,6 +1134,14 @@ function dt(s){
   if(s.indexOf('/')>=0){var p=s.split('/');if(p.length===3)return new Date(+p[2],+p[1]-1,+p[0]);}
   var d=new Date(s);return isNaN(d.getTime())?null:d;
 }
+// Normaliza nome de cliente para comparação entre bases: remove acentos,
+// colapsa espaços e ignora maiúsculas/minúsculas — evita que a ligação
+// BASE_CLIENTES <-> BASE_PATRIMONIO quebre por pequenas divergências de digitação.
+function normNome(s){
+  return (s||'').toString().trim().toUpperCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/\s+/g,' ');
+}
 function parseCSV(t){
   var rows=[],lines=t.split('\n');
   for(var i=0;i<lines.length;i++){
@@ -1329,7 +1337,10 @@ function buildAno(ano){
     var cli=(row[0]||'').trim();
     if(!cli||cli.toUpperCase()==='CLIENTE'||cli.length<3)continue;
     if(/[A-Z]{4}[0-9]/.test(cli))continue;
-    if(!SES.admin&&cli.toUpperCase()!==SES.nome.toUpperCase())continue;
+    if(!SES.admin){
+      if(normNome(cli)!==normNome(SES.nome))continue;
+      cli=SES.nome; // canoniza para o nome do login (evita divergência de acento/espaço com a BASE_PATRIMONIO)
+    }
     var d=dt(row[7]);if(!d)continue;
     var yr=d.getFullYear();if(yr>ano)continue;
     if(cl.indexOf(cli)<0)cl.push(cli);

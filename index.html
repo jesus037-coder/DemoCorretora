@@ -7,8 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+  <script src="./vendor/papaparse.min.js"></script>
+  <script src="./vendor/chart.umd.min.js"></script>
   <style>
     /* === DESIGN TOKENS === */
     :root {
@@ -762,9 +762,20 @@
       }
     }
 
-    Chart.defaults.color = '#8C99A8';
-    Chart.defaults.font = { family: "'Inter', sans-serif", size: 11 };
-    Chart.defaults.borderColor = 'rgba(255,255,255,.05)';
+    function chartDisponivel() {
+      return typeof Chart !== 'undefined';
+    }
+
+    function configurarChartDefaults() {
+      if (!chartDisponivel()) {
+        console.error('Chart.js não carregou (verifique o arquivo em ./vendor/chart.umd.min.js) — os gráficos ficarão ocultos, o restante do painel continua funcionando.');
+        toast('Biblioteca de gráficos não carregou — os cartões e tabelas continuam funcionando normalmente.', 'error');
+        return;
+      }
+      Chart.defaults.color = '#8C99A8';
+      Chart.defaults.font = { family: "'Inter', sans-serif", size: 11 };
+      Chart.defaults.borderColor = 'rgba(255,255,255,.05)';
+    }
 
     /* CARREGAMENTO E DATA PROCESS */
     function carregarConfigLocal() {
@@ -781,6 +792,11 @@
     function carregarDados() {
       document.getElementById('loadingScreen').style.display = 'flex';
       document.getElementById('tabsRoot').style.display = 'none';
+
+      if (typeof Papa === 'undefined') {
+        mostrarErroCarregamento('A biblioteca PapaParse não carregou (verifique ./vendor/papaparse.min.js).');
+        return;
+      }
 
       Papa.parse(CONFIG.CSV_URL, {
         download: true,
@@ -1034,6 +1050,7 @@
     }
 
     function renderGraficoBarrasMensal() {
+      if (!chartDisponivel()) return;
       const labels = [], receitas = [], despesas = [], investimentos = [];
       for (let i = 11; i >= 0; i--) {
         const d = new Date(STATE.anoSelecionado, STATE.mesSelecionado - i, 1);
@@ -1072,6 +1089,7 @@
     const CORES_SEGMENTO = ['#4E9CFF', '#33D890', '#F0A93E', '#F5486E', '#A78BFA', '#38BDF8', '#FB923C', '#34D399', '#F472B6', '#94A3B8', '#E8C547', '#22D3EE'];
 
     function renderGraficoRosca(mapaSegmentos) {
+      if (!chartDisponivel()) return;
       const labels = Object.keys(mapaSegmentos);
       const valores = Object.values(mapaSegmentos);
       destroyChart('rosca');
@@ -1140,6 +1158,8 @@
         deltaEl.innerHTML = (subiu ? '▲ ' : '▼ ') + Math.abs(delta).toFixed(1) + '% <span class="vs">de ' + anoA + ' para ' + anoB + '</span>';
       }
 
+      if (!chartDisponivel()) return;
+
       const serieA = totalPorTipoMesDoAno(metricaYoY, anoA);
       const serieB = totalPorTipoMesDoAno(metricaYoY, anoB);
       destroyChart('yoyBars');
@@ -1172,6 +1192,7 @@
     }
 
     function renderDoughnutAno(key, mapaSegmentos) {
+      if (!chartDisponivel()) return;
       const labels = Object.keys(mapaSegmentos);
       const valores = Object.values(mapaSegmentos);
       destroyChart(key);
@@ -1636,6 +1657,7 @@
 
     /* INICIALIZAÇÃO */
     document.addEventListener('DOMContentLoaded', function() {
+      configurarChartDefaults();
       carregarConfigLocal();
       carregarMetas();
       initTabs();
